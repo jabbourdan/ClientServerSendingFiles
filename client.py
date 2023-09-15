@@ -7,7 +7,7 @@ PORT = 4456
 ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
-FILENAME = "friends-final.txt"
+PATH="backup.info/"
 
 def send_file_data(client, file_path):
     with open(file_path, "rb") as f:
@@ -32,17 +32,22 @@ def main():
     # user ID
     user_id = input("Enter User ID: ")
     send_user_id(client, user_id)
+    all_files = os.listdir(PATH)
+    for fileName in all_files:
+        # Sending the filename and filesize to the server.
+        file_size = os.path.getsize(PATH + fileName)
+        data = f"{fileName}_{file_size}"
+        client.send(data.encode(FORMAT))
+        msg = client.recv(SIZE).decode(FORMAT)
+        print(f"SERVER: {msg}")
+    
+        # Sending file data with a progress bar.
+        send_file_data(client, PATH + fileName)
 
-    # Sending the filename and filesize to the server.
-    file_size = os.path.getsize(FILENAME)
-    data = f"{FILENAME}_{file_size}"
-    client.send(data.encode(FORMAT))
+    exitOrNot = "END"
+    client.send(exitOrNot.encode(FORMAT))
     msg = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg}")
-    
-    # Sending file data with a progress bar.
-    send_file_data(client, FILENAME)
-
     # Closing the connection.
     client.close()
 
