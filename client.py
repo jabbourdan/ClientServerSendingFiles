@@ -1,5 +1,6 @@
 import os
 import socket
+import struct
 from tqdm import tqdm
 
 IP = socket.gethostbyname(socket.gethostname())
@@ -25,13 +26,39 @@ def send_user_id(client, user_id):
     msg = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg}")
 
+def sendRequest(userID, version, op, fileName, size):
+    if fileName is None:
+        fileNameLength = 0
+        fileNameBytes = b''  # Empty bytes for file name
+    else:
+        fileNameLength = len(fileName)
+        fileNameBytes = fileName.encode('utf-8')  # Encode file name as bytes
+    if(size == None):
+        size = 0
+    # Create the binary struct
+    request_struct = struct.pack(f'5sbbh{fileNameLength}sI', userID.encode('utf-8'), version, op, fileNameLength, fileNameBytes, size)
+
+    return request_struct
+
 def main():
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect(ADDR)
-
     # user ID
     user_id = input("Enter User ID: ")
-    send_user_id(client, user_id)
+
+
+    #send reques for list all the data of this user
+
+
+
+    # send a request for save the files.
+    req = sendRequest(user_id,1,100,None,None)
+    client.send(req)
+
+    msg = client.recv(SIZE).decode(FORMAT)
+    print(f"SERVER: {msg}")
+
+
     all_files = os.listdir(PATH)
     for fileName in all_files:
         # Sending the filename and filesize to the server.
