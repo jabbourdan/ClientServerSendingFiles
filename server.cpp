@@ -18,7 +18,7 @@ struct RequestData {
     int size;
     char* payload; // You'll need to dynamically allocate this
 };
-
+// NOTE : need to load the last data from the tmp to the folder user.
 
 namespace fs = std::filesystem;
 
@@ -35,6 +35,28 @@ bool isValidUserIDAndFolderExist(const std::string& userId, const std::string& b
     return true;
 }
 
+void loadFile(SOCKET newSocket, const std::string& fullUserFolderPath, const std::string& filename, long fileSize) {
+    // Construct the full file path
+    std::string fullFilePath = fullUserFolderPath + "\\" + filename;
+
+    // Open the file in binary mode for writing
+    std::ofstream file(fullFilePath.c_str(), std::ios::out | std::ios::binary);
+
+    char buffer[SIZE];
+    long totalBytesReceived = 0;
+
+    while (totalBytesReceived < fileSize) {
+        int bytesReceived = recv(newSocket, buffer, SIZE, 0);
+        if (bytesReceived <= 0) {
+            break; // Error or end of data
+        }
+        file.write(buffer, bytesReceived);
+        totalBytesReceived += bytesReceived;
+    }
+    file.close();
+    std::cout << "File received and saved as: " << filename << std::endl;
+}
+
 void deleteFile(const std::string& filePath) {
     if (std::remove(filePath.c_str()) == 0) {
         std::cout << "File '" << filePath << "' deleted successfully." << std::endl;
@@ -45,13 +67,16 @@ void deleteFile(const std::string& filePath) {
 void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     RequestData requestData;
     std::string userID,filename;
+    int dataSize;
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
         userID = requestData.userID;
         filename = requestData.filename;
     }
     send(newSocket, "Loading the data for tmp folder", sizeof("Loading the data for tmp folder"), 0);
+    std:: string userPath =basePath + userID;
     std::string fullUserFolderPath = basePath + userID + "//" + filename;
+
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
         userID = requestData.userID;
@@ -61,7 +86,11 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     }
     deleteFile(fullUserFolderPath);
     send(newSocket, "Deleted the first file", sizeof("Deleted the first file"), 0);
-
+    if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR){
+        dataSize = requestData.size;
+    }
+    loadFile(newSocket,userPath,filename,dataSize);
+    send(newSocket, "Restore the file", sizeof("Restore the file"), 0);
 }
 void handleList1(SOCKET newSocket, const std::string& basePath){
 
@@ -138,22 +167,10 @@ void handleClient(SOCKET newSocket, const std::string& basePath) {
         std::string message = "212 : File info received for " + std::string(filename);
         // Send the message
         send(newSocket, message.c_str(), message.size(), 0);
-        // Receive and save the file as a binary file
-        std::string fullFilePath = fullUserFolderPath + "\\" + std::string(filename);
-        std::ofstream file(fullFilePath.c_str(), std::ios::out | std::ios::binary); // Open in binary mode
 
-        char buffer[SIZE];
-        long totalBytesReceived = 0;
-        while (totalBytesReceived < fileSize) {
-            int bytesReceived = recv(newSocket, buffer, SIZE, 0);
-            if (bytesReceived <= 0) {
-                break; // Error or end of data
-            }
-            file.write(buffer, bytesReceived);
-            totalBytesReceived += bytesReceived;
-        }
-        file.close();
-        std::cout << "File received and saved as: " << filename << std::endl;
+        // Receive and save the file as a binary file
+        loadFile(newSocket,fullUserFolderPath,filename,fileSize);
+
     }
     std::thread(handleList1, newSocket, basePath).detach();
 }
