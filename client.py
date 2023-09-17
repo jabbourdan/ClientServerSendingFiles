@@ -142,15 +142,16 @@ def main():
     print(f"SERVER: {msg5}")
 
 
-    #load the file
-    req6    = sendRequest(user_id,1,201,first_file,None)
-    client.send(req6)
-
-    msg6 = client.recv(SIZE).decode(FORMAT)
-    print(f"SERVER: {msg6}")
+    # Sending the filename and filesize to the server.
+    fileSize = os.path.getsize(PATH + first_file)
+        
+    data = f"{first_file}_{fileSize}"
+    client.send(data.encode(FORMAT))
+    msg = client.recv(SIZE).decode(FORMAT)
+    print(f"SERVER: {msg}")
     
-    send_file_data(client, PATH_TEMP+user_id+ "/" + first_file)
-    
+    # Sending file data with a progress bar.
+    send_file_data(client, PATH_TEMP + user_id +"/"+first_file)
     
     
     client.close()
