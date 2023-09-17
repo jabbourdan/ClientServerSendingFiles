@@ -9,6 +9,7 @@ ADDR = (IP, PORT)
 SIZE = 1024
 FORMAT = "utf-8"
 PATH="backup.info/"
+PATH_TEMP = "tmp/"
 
 
 def moverFolderToTmp(file_name, user_id):
@@ -50,7 +51,25 @@ def send_user_id(client, user_id):
     msg = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg}")
 
-import struct
+def loadTheFiles(client):
+    all_files = os.listdir(PATH)
+    for fileName in all_files:
+        # Sending the filename and filesize to the server.
+        fileSize = os.path.getsize(PATH + fileName)
+        
+        data = f"{fileName}_{fileSize}"
+        client.send(data.encode(FORMAT))
+        msg = client.recv(SIZE).decode(FORMAT)
+        print(f"SERVER: {msg}")
+    
+        # Sending file data with a progress bar.
+        send_file_data(client, PATH + fileName)
+
+    exitOrNot = "END"
+    
+    client.send(exitOrNot.encode(FORMAT))
+    msg = client.recv(SIZE).decode(FORMAT)
+    print(f"SERVER: {msg}")
 
 def sendRequest(userID, version, op, fileName, size):
     if fileName is None:
@@ -93,27 +112,9 @@ def main():
     msg1 = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg1}")
 
-
-
     all_files = os.listdir(PATH)
     first_file = all_files[0]
-    for fileName in all_files:
-        # Sending the filename and filesize to the server.
-        fileSize = os.path.getsize(PATH + fileName)
-        
-        data = f"{fileName}_{fileSize}"
-        client.send(data.encode(FORMAT))
-        msg = client.recv(SIZE).decode(FORMAT)
-        print(f"SERVER: {msg}")
-    
-        # Sending file data with a progress bar.
-        send_file_data(client, PATH + fileName)
-
-    exitOrNot = "END"
-    
-    client.send(exitOrNot.encode(FORMAT))
-    msg = client.recv(SIZE).decode(FORMAT)
-    print(f"SERVER: {msg}")
+    loadTheFiles(client)
     
     req3 = sendRequest(user_id,1,202,None,None)
     client.send(req3)
@@ -131,7 +132,6 @@ def main():
     msg4 = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg4}")
     # Closing the connection.
-    
 
 
     #delete the file
@@ -141,6 +141,17 @@ def main():
     msg5 = client.recv(SIZE).decode(FORMAT)
     print(f"SERVER: {msg5}")
 
+
+    #load the file
+    req6    = sendRequest(user_id,1,201,first_file,None)
+    client.send(req6)
+
+    msg6 = client.recv(SIZE).decode(FORMAT)
+    print(f"SERVER: {msg6}")
+    
+    send_file_data(client, PATH_TEMP+user_id+ "/" + first_file)
+    
+    
     
     client.close()
 
