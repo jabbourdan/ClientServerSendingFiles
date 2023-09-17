@@ -45,7 +45,7 @@ void loadFile(SOCKET newSocket, const std::string& fullUserFolderPath, const std
     char buffer[SIZE];
     long totalBytesReceived = 0;
 
-    while (totalBytesReceived < fileSize) {
+    while (totalBytesReceived <  fileSize) {
         int bytesReceived = recv(newSocket, buffer, SIZE, 0);
         if (bytesReceived <= 0) {
             break; // Error or end of data
@@ -65,32 +65,44 @@ void deleteFile(const std::string& filePath) {
     }
 }
 void loadAndDelete(SOCKET newSocket, const std::string& basePath){
-    RequestData requestData;
+    RequestData requestData1;
     std::string userID,filename;
     int dataSize;
-    if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
+    if (recv(newSocket, (char *) &requestData1, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
-        userID = requestData.userID;
-        filename = requestData.filename;
+        userID = requestData1.userID;
+        filename = requestData1.filename;
     }
     send(newSocket, "Loading the data for tmp folder", sizeof("Loading the data for tmp folder"), 0);
     std:: string userPath =basePath + userID;
     std::string fullUserFolderPath = basePath + userID + "//" + filename;
-
-    if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
+    RequestData requestData2;
+    if (recv(newSocket, (char *) &requestData2, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
-        userID = requestData.userID;
-        filename = requestData.filename;
-        char version = requestData.version;
-        char op = requestData.op;
+        userID = requestData2.userID;
+        filename = requestData2.filename;
+        char version = requestData2.version;
+        char op = requestData2.op;
     }
     deleteFile(fullUserFolderPath);
     send(newSocket, "Deleted the first file", sizeof("Deleted the first file"), 0);
-    if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR){
-        dataSize = requestData.size;
-    }
-    loadFile(newSocket,userPath,filename,dataSize);
-    send(newSocket, "Restore the file", sizeof("Restore the file"), 0);
+    char fileInfo[SIZE];
+    memset(fileInfo, 0, SIZE);
+    recv(newSocket, fileInfo, SIZE, 0);
+    
+
+    // Parse file information
+    char *filenamestr = strtok(fileInfo, "_");
+    char *fileSizeStr = strtok(nullptr, "_");
+    long fileSize = std::stol(fileSizeStr);
+
+    std::string message = "Load the data agian" + std::string(filenamestr);
+    // Send the message
+    send(newSocket, message.c_str(), message.size(), 0);
+
+    // Receive and save the file as a binary file
+    loadFile(newSocket,fullUserFolderPath,filenamestr,fileSize);
+
 }
 void handleList1(SOCKET newSocket, const std::string& basePath){
 
@@ -130,7 +142,7 @@ void handleClient(SOCKET newSocket, const std::string& basePath) {
         version = requestData.version;
         op = requestData.op;
 
-  }
+    }
     send(newSocket, "212 : The folder user is created", sizeof("212 : The folder user is created"), 0);
 
     std::string fullUserFolderPath = basePath + userID;
@@ -237,7 +249,7 @@ void startServer(const std::string &basePath) {
 }
 
 int main() {
-    std::string basePath = "C:\\Users\\jabbour.dandan\\CLionProjects\\server2\\";
+    std::string basePath = "C:\\backupsvr\\";
     startServer(basePath);
     std::cout << "Server stopped." << std::endl;
     return 0;
