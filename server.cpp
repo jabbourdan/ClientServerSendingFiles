@@ -8,19 +8,29 @@
 
 #define PORT 4456
 #define SIZE 1024
+#define SIZENAME 1024
 
 struct RequestData {
     char userID[5];
     char version;
     char op;
     short fileNameLength;
-    char filename[32]; // You'll need to dynamically allocate this
+    char filename[SIZENAME]; // You'll need to dynamically allocate this
     int size;
-    char* payload; // You'll need to dynamically allocate this
+    char payload[SIZE]; // You'll need to dynamically allocate this
 };
 // NOTE : need to load the last data from the tmp to the folder user.
 
+struct answer {
+    char version;
+    char status;
+    short fileNameLength;
+    char filename[SIZENAME];
+    int size;
+    char payload[SIZE];
+};
 namespace fs = std::filesystem;
+
 
 bool isValidUserIDAndFolderExist(const std::string& userId, const std::string& basePath) {
     // Check if userID is exactly 4 characters
@@ -75,7 +85,7 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     }
     send(newSocket, "Loading the data for tmp folder", sizeof("Loading the data for tmp folder"), 0);
     std:: string userPath =basePath + userID;
-    std::string fullUserFolderPath = basePath + userID + "//" + filename;
+    std::string fullUserFolderPath = basePath + userID + "\\" + filename;
     RequestData requestData2;
     if (recv(newSocket, (char *) &requestData2, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
@@ -89,7 +99,7 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     char fileInfo[SIZE];
     memset(fileInfo, 0, SIZE);
     recv(newSocket, fileInfo, SIZE, 0);
-    
+
 
     // Parse file information
     char *filenamestr = strtok(fileInfo, "_");
@@ -101,9 +111,25 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     send(newSocket, message.c_str(), message.size(), 0);
 
     // Receive and save the file as a binary file
-    loadFile(newSocket,fullUserFolderPath,filenamestr,fileSize);
+    loadFile(newSocket,userPath,filenamestr,fileSize);
 
 }
+std::vector<std::string> listFilesInDirectory(const std::string& directoryPath) {
+    std::vector<std::string> fileNames;
+
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+            if (entry.is_regular_file()) {
+                fileNames.push_back(entry.path().filename().string());
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& ex) {
+        std::cerr << "Error: " << ex.what() << std::endl;
+    }
+
+    return fileNames;
+}
+
 void handleList1(SOCKET newSocket, const std::string& basePath){
 
     RequestData requestData;
@@ -120,12 +146,16 @@ void handleList1(SOCKET newSocket, const std::string& basePath){
 }
 void handleList(SOCKET newSocket, const std::string& basePath){
     RequestData requestData;
+    answer answer;
     std::string userID;
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
+        answer.version = requestData.version;
+        answer.status = 211;
         userID = requestData.userID;
     }
     std::string fullUserFolderPath = basePath + userID;
+    
     send(newSocket, "211 : These are the file", sizeof("211 : These are the file"), 0);
 }
 void handleClient(SOCKET newSocket, const std::string& basePath) {
@@ -249,7 +279,7 @@ void startServer(const std::string &basePath) {
 }
 
 int main() {
-    std::string basePath = "C:\\backupsvr\\";
+    std::string basePath = "C:\\Users\\jabbour.dandan\\CLionProjects\\serverProject1\\";
     startServer(basePath);
     std::cout << "Server stopped." << std::endl;
     return 0;
