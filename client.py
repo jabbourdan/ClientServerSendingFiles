@@ -10,8 +10,24 @@ SIZE = 1024
 FORMAT = "utf-8"
 PATH="backup.info/"
 PATH_TEMP = "tmp/"
+PATH_FOR_SERVERINFO = "server.info"
 
+def parse_server_info(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            server_info = file.read().strip()  # Read the content of the file and remove leading/trailing whitespaces
 
+            # Split the server info by ':' to separate the IP and port
+            ip, port = server_info.split(':')
+
+            # Convert the port to an integer
+            port = int(port)
+
+            return ip, port
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
 def moverFolderToTmp(file_name, user_id):
     # Define the source and destination folders
     source_folder = "backup.info/"  # Replace with the path to your source folder
@@ -90,7 +106,9 @@ def sendRequest(userID, version, op, fileName, size):
 
 def main():
     try :
+        ip, port = parse_server_info(PATH_FOR_SERVERINFO)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ADDR = (ip, port)
         client.connect(ADDR)
     except Exception as e:
         print(f"Error connecting to the server: {e}")    
