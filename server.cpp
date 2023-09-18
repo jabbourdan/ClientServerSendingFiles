@@ -1,33 +1,8 @@
-#include <iostream>
-#include <fstream>
-#include <winsock2.h>
-#include <io.h> // For _access
-#include <filesystem>
-#include <thread>
+#include "server.h"
 
 
-#define SIZE 1024
-#define SIZENAME 1024
-
-struct RequestData {
-    char userID[5];
-    char version;
-    char op;
-    short fileNameLength;
-    char filename[SIZENAME]; // You'll need to dynamically allocate this
-    int size;
-    char payload[SIZE]; // You'll need to dynamically allocate this
-};
 // NOTE : need to load the last data from the tmp to the folder user.
 
-struct answer {
-    char version;
-    char status;
-    short fileNameLength;
-    char filename[SIZENAME];
-    int size;
-    char payload[SIZE];
-};
 namespace fs = std::filesystem;
 
 void parseServerInfo(const std::string& filePath, std::string& ip, int& port) {
@@ -96,7 +71,6 @@ void deleteFile(const std::string& filePath) {
 void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     RequestData requestData1;
     std::string userID,filename;
-    int dataSize;
     if (recv(newSocket, (char *) &requestData1, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
         userID = requestData1.userID;
@@ -107,11 +81,7 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     std::string fullUserFolderPath = basePath + userID + "\\" + filename;
     RequestData requestData2;
     if (recv(newSocket, (char *) &requestData2, sizeof(RequestData), 0) != SOCKET_ERROR) {
-        // Assign each field to separate variables
-        userID = requestData2.userID;
-        filename = requestData2.filename;
-        char version = requestData2.version;
-        char op = requestData2.op;
+
     }
     deleteFile(fullUserFolderPath);
     send(newSocket, "Deleted the first file", sizeof("Deleted the first file"), 0);
@@ -133,21 +103,6 @@ void loadAndDelete(SOCKET newSocket, const std::string& basePath){
     loadFile(newSocket,userPath,filenamestr,fileSize);
 
 }
-std::vector<std::string> listFilesInDirectory(const std::string& directoryPath) {
-    std::vector<std::string> fileNames;
-
-    try {
-        for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
-            if (entry.is_regular_file()) {
-                fileNames.push_back(entry.path().filename().string());
-            }
-        }
-    } catch (const std::filesystem::filesystem_error& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-    }
-
-    return fileNames;
-}
 
 void handleList1(SOCKET newSocket, const std::string& basePath){
 
@@ -156,8 +111,6 @@ void handleList1(SOCKET newSocket, const std::string& basePath){
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
         userID = requestData.userID;
-        char version = requestData.version;
-        char op = requestData.op;
     }
     std::string fullUserFolderPath = basePath + userID;
     send(newSocket, "211 : These are the file for", sizeof("211 : These are the file for"), 0);
@@ -165,12 +118,10 @@ void handleList1(SOCKET newSocket, const std::string& basePath){
 }
 void handleList(SOCKET newSocket, const std::string& basePath){
     RequestData requestData;
-    answer answer;
+
     std::string userID;
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
-        answer.version = requestData.version;
-        answer.status = 211;
         userID = requestData.userID;
     }
     std::string fullUserFolderPath = basePath + userID;
@@ -181,15 +132,10 @@ void handleClient(SOCKET newSocket, const std::string& basePath) {
     // Receive the userID
     RequestData requestData;
     std::string userID;
-    char version,op;
-    short fileNameLength;
-    int size;
     // Receive the struct as binary data
     if (recv(newSocket, (char *) &requestData, sizeof(RequestData), 0) != SOCKET_ERROR) {
         // Assign each field to separate variables
         userID = requestData.userID;
-        version = requestData.version;
-        op = requestData.op;
 
     }
     send(newSocket, "212 : The folder user is created", sizeof("212 : The folder user is created"), 0);
@@ -296,13 +242,10 @@ void startServer(const std::string &basePath) {
 
     }
 
-    // Cleanup code (if needed) will be executed after breaking out of the loop
-    closesocket(serverSocket);
-    WSACleanup();
 }
 
 int main() {
-    std::string basePath = "C:\\Users\\jabbour.dandan\\CLionProjects\\serverProject1\\";
+    std::string basePath = R"(C:\Users\jaboo\CLionProjects\server2\)";
     startServer(basePath);
     std::cout << "Server stopped." << std::endl;
     return 0;
