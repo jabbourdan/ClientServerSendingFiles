@@ -1,16 +1,15 @@
 # Describtion of the Project:
 
-In this project we will implement a server software for backing up and retrieving files and a client software that will work against it.
+In this project, we will implement a server software for backing up and retrieving files and a client software that will work against it.
 
-The server will be written in C++ and the client in python.
+The server will be written in C++ and the client in Python.
 
 # server:
 
 The server will allow any client to send files to it for backup and retrieve these files at a later time.
 Server characteristics:
 
-A. The server will support a stateless protocol
-, that is, will not save information between request 1
+A. The server will support a stateless protocol, that is, will not save information between requests 1
 (Each request stands on its own).
 
 B. The server will support multiple users through threads.
@@ -37,6 +36,10 @@ NOTE: you need to keep at least one file in the backup.info folder.
 
 
 ## Installation
+First of all, because I work with a work computer I can not make any folder in the c: directly so I made the folders user on the server so please do the same.
+just change the basePath to the server path it's important otherwise the server will not be able to read the server.info (I could change it but it's my work computer)
+
+![init](https://github.com/jabbourdan/ClientServerSendingFiles/assets/111487226/463e7ae1-7592-4a29-b3b4-73e64acc4302)
 
 Install my-project with npm
 
