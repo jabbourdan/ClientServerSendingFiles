@@ -6,7 +6,6 @@
 #include <thread>
 
 
-#define PORT 4456
 #define SIZE 1024
 #define SIZENAME 1024
 
@@ -31,6 +30,26 @@ struct answer {
 };
 namespace fs = std::filesystem;
 
+void parseServerInfo(const std::string& filePath, std::string& ip, int& port) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        throw std::runtime_error("File not found: " + filePath);
+    }
+
+    std::string serverInfo;
+    std::getline(file, serverInfo);
+    file.close();
+
+    std::istringstream ss(serverInfo);
+    std::string ipPart, portPart;
+
+    if (std::getline(ss, ipPart, ':') && std::getline(ss, portPart)) {
+        ip = ipPart;
+        port = std::stoi(portPart);
+    } else {
+        throw std::runtime_error("Invalid server info format in the file: " + filePath);
+    }
+}
 
 bool isValidUserIDAndFolderExist(const std::string& userId, const std::string& basePath) {
     // Check if userID is exactly 4 characters
@@ -155,7 +174,7 @@ void handleList(SOCKET newSocket, const std::string& basePath){
         userID = requestData.userID;
     }
     std::string fullUserFolderPath = basePath + userID;
-    
+
     send(newSocket, "211 : These are the file", sizeof("211 : These are the file"), 0);
 }
 void handleClient(SOCKET newSocket, const std::string& basePath) {
@@ -224,6 +243,10 @@ void startServer(const std::string &basePath) {
         std::cerr << "WSAStartup failed." << std::endl;
         return;
     }
+    std::string filePath = basePath + "/server.info"; // Replace with the actual path to your server info file
+    std::string ip;
+    int port;
+    parseServerInfo(filePath,ip,port);
 
     SOCKET serverSocket, newSocket;
     struct sockaddr_in serverAddr, clientAddr;
@@ -238,8 +261,8 @@ void startServer(const std::string &basePath) {
     }
 
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_port = htons(port);
+    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
 
     // Bind the socket
     if (bind(serverSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
@@ -251,9 +274,9 @@ void startServer(const std::string &basePath) {
 
     // Listen for incoming connections
     if (listen(serverSocket, 10) == 0) {
-        std::cout << "Server listening on port " << PORT << " ..." << std::endl;
+        std::cout << "Server listening on port " << port << " ..." << std::endl;
     } else {
-        std::cerr << "Error listening on port " << PORT << "." << std::endl;
+        std::cerr << "Error listening on port " << port << "." << std::endl;
         closesocket(serverSocket);
         WSACleanup();
         return;
